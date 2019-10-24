@@ -12,6 +12,7 @@ int getState(int **grid, int w, int h, int x, int y)
     else
         return 0;
 }
+
 int countNeighbour(int **grid, int w, int h, int x, int y)
 {
     int c = 0;
@@ -64,8 +65,7 @@ int main (int argc, char** argv)
     SDL_Event event;
     bool quit = false;
     int c;
-
-
+    
     while (!quit)
     {
         //Backing up grid.
