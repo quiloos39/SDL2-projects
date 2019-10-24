@@ -1,162 +1,127 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <time.h>
+#define N 30
+#define RECTW 20
+#define RECTH 20
+#define OFFSET 2
 
-
-#define AMOUNTOFRECTANGLE 10
-#define RECTWIDTH 50
-#define RECTHEIGHT 50
-
-typedef struct {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    int width, height;
-    int **grid;
-} Game;
-
-Game *init()
-{
-    Game *g = malloc(sizeof(Game));
-    g->window = SDL_CreateWindow("Game of life", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, RECTWIDTH * AMOUNTOFRECTANGLE, RECTHEIGHT * AMOUNTOFRECTANGLE, SDL_WINDOW_SHOWN);
-    g->renderer = SDL_CreateRenderer(g->window, -1, SDL_RENDERER_ACCELERATED);
-    g->width = AMOUNTOFRECTANGLE;
-    g->height = AMOUNTOFRECTANGLE;
-    srand(time(NULL));
-    int y,x;
-    int **grid = malloc(sizeof(int *) * AMOUNTOFRECTANGLE);
-    for (y = 0; y < AMOUNTOFRECTANGLE; y++)
-    {
-        grid[y] = malloc(sizeof(int) * AMOUNTOFRECTANGLE);
-        for (x = 0; x < AMOUNTOFRECTANGLE; x++)
-        {
-            int r = rand()%100;
-            if (r%20 == 0)
-                grid[y][x] = 1;
-            else
-                grid[y][x] = 0;
-        }
-    }
-    g->grid = grid;
-
-    return g;
-}
-
-
-void draw(Game *g)
-{
-    SDL_SetRenderDrawColor(g->renderer, 31, 31, 31, 255);
-    SDL_RenderClear(g->renderer);
-    int y,x;
-    for (y = 0; y < g->height; y++)
-    {
-        for (x = 0; x < g->width; x++)
-        {
-            SDL_Rect rect;
-            rect.x = x*RECTWIDTH;
-            rect.y = y*RECTHEIGHT;
-            rect.w = RECTWIDTH;
-            rect.h = RECTHEIGHT;
-            if (g->grid[y][x] == 0)
-                SDL_SetRenderDrawColor(g->renderer, 255, 255, 255, 255);
-            else
-                SDL_SetRenderDrawColor(g->renderer, 0, 0, 0, 255);
-            SDL_RenderFillRect(g->renderer, &rect);
-        }
-    }
-    SDL_RenderPresent(g->renderer);
-}
-
-int getCell(int **grid, int w, int h, int y, int x)
+int getState(int **grid, int w, int h, int x, int y)
 {
     if (x > 0 && x < w && y > 0 && y < h)
         return grid[y][x];
     else
         return 0;
 }
-
-int countNeighbour(int **grid, int w, int h, int y, int x)
+int countNeighbour(int **grid, int w, int h, int x, int y)
 {
     int c = 0;
-    if (getCell(grid, w, h, y + 1, x))
+    if (getState(grid, w, h, x + 1, y))
         c++;
-    if (getCell(grid, w, h, y - 1, x))
+    if (getState(grid, w, h, x - 1, y))
         c++;
-    if (getCell(grid, w, h, y, x + 1))
+    if (getState(grid, w, h, x, y + 1))
         c++;
-    if (getCell(grid, w, h, y, x - 1))
+    if (getState(grid, w, h, x, y - 1))
         c++;
-    if (getCell(grid, w, h, y + 1, x + 1))
+    if (getState(grid, w, h, x + 1, y + 1))
         c++;
-    if (getCell(grid, w, h, y + 1, x - 1))
+    if (getState(grid, w, h, x + 1, y - 1))
         c++;
-    if (getCell(grid, w, h, y - 1, x + 1))
+    if (getState(grid, w, h, x - 1, y + 1))
         c++;
-    if (getCell(grid, w, h, y - 1, x - 1))
+    if (getState(grid, w, h, x - 1, y - 1))
         c++;
     return c;
 }
 
-void update(Game *g)
+int main (int argc, char** argv)
 {
-    int **prevGrid = malloc(sizeof(int) * AMOUNTOFRECTANGLE * AMOUNTOFRECTANGLE);
-    memcpy(prevGrid, g->grid, sizeof(int) * AMOUNTOFRECTANGLE * AMOUNTOFRECTANGLE);
-    int y,x;
-    for (y = 0; y < RECTHEIGHT; y++)
-    {
-        for (x = 0; x < RECTWIDTH; x++)
-        {
-            int c = countNeighbour(prevGrid, g->width, g->height, y, x);
-            printf("%d\t", c);
-            if (g->grid[y][x])
-            {
-                if (c == 2 || c == 3)
-                    g->grid[y][x] = 1;
-                else if (c > 3)
-                    g->grid[y][x] = 0;
-                else if (c < 2)
-                    g->grid[y][x] = 0;
-            }
-            else
-            {
-                if (c == 3)
-                    g->grid[y][x] = 1;
-            }
-        }
-        printf("\n");
-    }
-    printf("---------------------\n");
-}
+    SDL_Window *window = NULL;
+    window = SDL_CreateWindow("Game-Of-Life", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 640, SDL_WINDOW_SHOWN);
+    SDL_Renderer *renderer = NULL;
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-void gameLoop(Game *g)
-{
-    bool quit = false;
+    int **grid = malloc(sizeof(int *) * N);
+    int y,x;
+    int r;
+    srand(0);
+
+    for (y = 0; y < N; y++)
+    {
+        grid[y] = malloc(sizeof(int) * N);
+        for (x = 0; x < N; x++)
+        {
+            r = rand()%100;
+            if (r%5 == 0)
+                grid[y][x] = 1;
+            else
+                grid[y][x] = 0;
+        }
+    }
+
+    int **tmpGrid = malloc(sizeof(int *) * N);
+
     SDL_Event event;
+    bool quit = false;
+    int c;
+
+
     while (!quit)
     {
-        update(g);
-        draw(g);
-        while (SDL_PollEvent(&event) != 0)
+        //Backing up grid.
+        for (y = 0; y < N; y++)
+        {
+            tmpGrid[y] = malloc(sizeof(int) * N);
+            memcpy(tmpGrid[y], grid[y], sizeof(int) * N);
+        }
+
+        // Physics
+        for (x = 0; x < N; x++)
+        {
+            for (y = 0; y < N; y++)
+            {
+                c = countNeighbour(tmpGrid, N, N, x, y);
+                if (grid[y][x])
+                {
+                    if (c < 2)
+                        grid[y][x] = 0;
+                    else if (c == 2 || c == 3)
+                        grid[y][x] == 1;
+                    else if (c > 3)
+                        grid[y][x] = 0;
+                }
+                else
+                if (c == 3)
+                    grid[y][x] = 1;
+            }
+        }
+
+        //Rendering
+        SDL_SetRenderDrawColor(renderer, 31, 31, 31, 255);
+        SDL_RenderClear(renderer);
+        for (y = 0; y < N; y++)
+        {
+            for (x = 0; x < N; x++)
+            {
+                SDL_Rect rect = {x*RECTW, y*RECTH, RECTW - OFFSET, RECTH - OFFSET };
+                if (grid[y][x])
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                else
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(renderer, &rect);
+            }
+        }
+        SDL_RenderPresent(renderer);
+        if (SDL_PollEvent(&event) != 0)
         {
             if (event.type == SDL_QUIT)
             {
                 quit = true;
             }
         }
-        //usleep(500000);
+        SDL_Delay(100);
     }
-}
-
-void quit(Game *g)
-{
-    SDL_DestroyWindow(g->window);
+    SDL_DestroyWindow(window);
     SDL_Quit();
-}
-
-int main (int argc, char** argv)
-{
-    Game *g = init();
-    gameLoop(g);
-    quit(g);
     return 0;
 }
